@@ -1,0 +1,25 @@
+.mainPage {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  margin-top: 5%;
+  gap: 10px;
+}
+
+.tableContainer {
+  width: 65vw;
+  overflow: hidden;
+  height: 80vh;
+}
+
+.tableContainer > *{
+  margin: 10px;
+}
+
+.chartComponentContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  height: 100%;
+}

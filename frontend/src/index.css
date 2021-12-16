@@ -1,0 +1,46 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+}
+
+.card {
+  background-color: whitesmoke;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  padding: 1rem;
+  width: 20rem;
+}
+
+.btn {
+  font: inherit;
+  padding: 0.5rem 1.5rem;
+  cursor: pointer;
+  border-radius: 4px;
+  background-color: rgb(59, 101, 230);
+  color: whitesmoke;
+  border: 1px solid royalblue;
+  margin: 0 1rem;
+}
+
+.btn:hover {
+  background-color: rgb(84, 120, 228);
+  border-color: rgb(84, 120, 228);
+}
+
+.btn--alt {
+  background-color: transparent;
+  color: #800040;
+}
+
+.btn--alt:hover {
+  background-color: whitesmoke;
+}

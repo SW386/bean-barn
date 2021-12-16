@@ -1,0 +1,1045 @@
+Script started on 2021-11-19 16:52:28-05:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="139" LINES="16"]
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ npm run starts
+[37;40mnpm[0m [0m[31;40mERR![0m [0m[35mcode[0m ENOENT
+[0m[37;40mnpm[0m [0m[31;40mERR![0m [0m[35msyscall[0m open
+[0m[37;40mnpm[0m [0m[31;40mERR![0m [0m[35mpath[0m /home/noah/mini-amazon-cs-316/backend/db/package.json
+[0m[37;40mnpm[0m [0m[31;40mERR![0m [0m[35merrno[0m -2
+[0m[37;40mnpm[0m [0m[31;40mERR![0m [0m[35menoent[0m ENOENT: no such file or directory, open '/home/noah/mini-amazon-cs-316/backend/db/package.json'
+[0m[37;40mnpm[0m [0m[31;40mERR![0m [0m[35menoent[0m This is related to npm not being able to find a file.
+[0m[37;40mnpm[0m [0m[31;40mERR![0m [0m[35menoent[0m 
+[0m
+[37;40mnpm[0m [0m[31;40mERR![0m[35m[0m A complete log of this run can be found in:
+[0m[37;40mnpm[0m [0m[31;40mERR![0m[35m[0m     /home/noah/.npm/_logs/2021-11-19T21_52_32_617Z-debug.log
+[0m]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ ç[Kls
+create_log.txt  create.sql  [0m[01;34mdata[0m  [01;32mgenerate_data.sh[0m  load.sql  [01;34mscripts[0m  [01;32msetup.sh[0m  typescript
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ c [Kd scripts/
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db/scripts[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db/scripts[00m$ ]ls
+bash: ]ls: command not found
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db/scripts[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db/scripts[00m$ ls
+generate_orders.py  generate_products.py  generate_purchases.py  generate_sellers.py  generate_users.py  [0m[01;34mresources[0m
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db/scripts[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db/scripts[00m$ cd ..
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ ./setup.sh 
+CREATE TABLE Users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    firstname VARCHAR(255) NOT NULL,
+    lastname VARCHAR(255) NOT NULL,
+    street_address VARCHAR(255) NOT NULL,
+    city VARCHAR(63) NOT NULL,
+    state VARCHAR(63) NOT NULL,
+    zip INT NOT NULL,
+    hashedpassword VARCHAR(255) NOT NULL,
+    balance FLOAT NOT NULL
+);
+CREATE TABLE
+CREATE TABLE Sellers (
+    id INT NOT NULL PRIMARY KEY,
+    FOREIGN KEY (id) REFERENCES Users(id)
+);
+CREATE TABLE
+CREATE TABLE Orders(
+    id SERIAL PRIMARY KEY,
+    time_purchased timestamp without time zone NOT NULL DEFAULT (current_timestamp AT TIME ZONE 'UTC'),
+    buyer_id INT NOT NULL REFERENCES Users(id)
+);
+CREATE TABLE
+CREATE TABLE Categories (
+    name VARCHAR(255) NOT NULL PRIMARY KEY
+);
+CREATE TABLE
+CREATE TABLE Products (
+    id SERIAL PRIMARY KEY,
+    seller_id INT REFERENCES Sellers(id),
+    quantity INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    price FLOAT NOT NULL,
+    description VARCHAR(4000),
+    category VARCHAR(100) REFERENCES Categories(name),
+    img_link VARCHAR(1000) NOT NULL,
+    available BOOLEAN DEFAULT TRUE
+);
+CREATE TABLE
+CREATE TYPE fulfillment AS ENUM ('ordered', 'shipped', 'delivered');
+CREATE TYPE
+CREATE TABLE Purchases(
+    product_id INT NOT NULL REFERENCES Products(id),
+    order_id INT NOT NULL REFERENCES Orders(id),
+    quantity INT NOT NULL,
+    price_per_item FLOAT NOT NULL,
+    fulfillment_status fulfillment NOT NULL,
+    PRIMARY KEY(order_id, product_id)
+);
+CREATE TABLE
+CREATE TABLE Reviews(
+    id SERIAL PRIMARY KEY,
+    rating INT NOT NULL,
+    review VARCHAR(4000),
+    date timestamp without time zone NOT NULL DEFAULT (current_timestamp AT TIME ZONE 'UTC'),
+    CONSTRAINT Chk_rating CHECK (rating>0 AND rating<6)
+);
+CREATE TABLE
+CREATE TABLE ProductReviews(
+    id INT NOT NULL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES Users(id),
+    product_id INT NOT NULL REFERENCES Products(id),
+    FOREIGN KEY (id) REFERENCES Reviews(id),
+    CONSTRAINT U_ProductReviews UNIQUE (user_id, product_id)
+);
+CREATE TABLE
+CREATE TABLE SellerReviews(
+    id INT NOT NULL PRIMARY KEY,
+    buyer_id INT NOT NULL REFERENCES Users(id),
+    seller_id INT NOT NULL REFERENCES Sellers(id),
+    FOREIGN KEY (id) REFERENCES Reviews(id),
+    CONSTRAINT U_SellerReviews UNIQUE (buyer_id, seller_id)
+);
+CREATE TABLE
+CREATE TABLE Upvotes(
+    review_id INT NOT NULL REFERENCES Reviews(id),
+    user_id INT NOT NULL REFERENCES Users(id),
+    PRIMARY KEY (review_id, user_id)
+);
+CREATE TABLE
+CREATE TABLE CartItems (
+    product_id INT NOT NULL REFERENCES Products(id),
+    buyer_id INT REFERENCES Users(id),
+    quantity INT NOT NULL,
+    PRIMARY KEY (product_id, buyer_id)
+);
+CREATE TABLE
+CREATE FUNCTION TF_DTSellerReviews() RETURNS TRIGGER AS $$
+BEGIN
+  IF NOT EXISTS (
+    (SELECT product_id FROM (
+    Purchases JOIN Orders ON Purchases.order_id=Orders.id
+    )
+    WHERE Orders.buyer_id=NEW.buyer_id)
+    INTERSECT
+    (SELECT id
+    FROM Products
+    WHERE Products.seller_id=NEW.seller_id)
+  )
+  THEN RAISE EXCEPTION 'User has not purchased something from this seller and thus cannot review them.';
+  END IF; 
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE FUNCTION
+CREATE TRIGGER TF_DTSellerReviews
+  BEFORE INSERT OR UPDATE ON SellerReviews
+  FOR EACH ROW
+  EXECUTE PROCEDURE TF_DTSellerReviews();
+CREATE TRIGGER
+\COPY Users(email, firstname, lastname, street_address, city, state, zip, hashedpassword, balance) FROM 'data/User.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:1: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY users, line 5
+\COPY Categories FROM 'data/Category.csv' WITH DELIMITER ',' NULL '' CSV
+COPY 67
+\COPY Sellers FROM 'data/Seller.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:3: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY sellers, line 4
+\COPY Orders(time_purchased, buyer_id) FROM 'data/Order.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:4: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY orders, line 3
+\COPY Products(seller_id, quantity, name, price, description, category, img_link, available) FROM 'data/Product.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:5: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY products, line 4
+\COPY Purchases FROM 'data/Purchase.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:6: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY purchases, line 5
+\COPY Reviews FROM 'data/Reviews.csv' WITH DELIMITER ',' NULL '' CSV
+COPY 2
+\COPY ProductReviews FROM 'data/ProductReviews.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:8: ERROR:  insert or update on table "productreviews" violates foreign key constraint "productreviews_user_id_fkey"
+DETAIL:  Key (user_id)=(1) is not present in table "users".
+\COPY SellerReviews FROM 'data/SellerReview.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:9: ERROR:  User has not purchased something from this seller and thus cannot review them.
+CONTEXT:  PL/pgSQL function tf_dtsellerreviews() line 13 at RAISE
+COPY sellerreviews, line 1: "1000,1,2"
+\COPY CartItems FROM 'data/CartItem.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:10: ERROR:  insert or update on table "cartitems" violates foreign key constraint "cartitems_product_id_fkey"
+DETAIL:  Key (product_id)=(1) is not present in table "products".
+/*
+\COPY Users(email, firstname, lastname, street_address, city, state, zip, hashedpassword, balance) FROM 'C:/Users/Michael/Desktop/data/User.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Categories FROM 'C:/Users/Michael/Desktop/data/Category.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Sellers FROM 'C:/Users/Michael/Desktop/data/Seller.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Orders(time_purchased, buyer_id) FROM 'C:/Users/Michael/Desktop/data/Order.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Products(seller_id, quantity, name, price, description, category, img_link, available) FROM 'C:/Users/Michael/Desktop/data/Product.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Purchases FROM 'C:/Users/Michael/Desktop/data/Purchase.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Reviews FROM 'C:/Users/Michael/Desktop/data/Reviews.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY ProductReviews FROM 'C:/Users/Michael/Desktop/data/ProductReviews.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY SellerReviews FROM 'C:/Users/Michael/Desktop/data/SellerReview.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY CartItems FROM 'C:/Users/Michael/Desktop/data/CartItem.csv' WITH DELIMITER ',' NULL '' CSV
+*/
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ psql -af load.sql amazon
+\COPY Users(email, firstname, lastname, street_address, city, state, zip, hashedpassword, balance) FROM 'data/User.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:1: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY users, line 5
+\COPY Categories FROM 'data/Category.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:2: ERROR:  duplicate key value violates unique constraint "categories_pkey"
+DETAIL:  Key (name)=(produce) already exists.
+CONTEXT:  COPY categories, line 1
+\COPY Sellers FROM 'data/Seller.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:3: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY sellers, line 4
+\COPY Orders(time_purchased, buyer_id) FROM 'data/Order.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:4: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY orders, line 3
+\COPY Products(seller_id, quantity, name, price, description, category, img_link, available) FROM 'data/Product.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:5: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY products, line 4
+\COPY Purchases FROM 'data/Purchase.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:6: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY purchases, line 5
+\COPY Reviews FROM 'data/Reviews.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:7: ERROR:  duplicate key value violates unique constraint "reviews_pkey"
+DETAIL:  Key (id)=(200) already exists.
+CONTEXT:  COPY reviews, line 1
+\COPY ProductReviews FROM 'data/ProductReviews.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:8: ERROR:  insert or update on table "productreviews" violates foreign key constraint "productreviews_user_id_fkey"
+DETAIL:  Key (user_id)=(1) is not present in table "users".
+\COPY SellerReviews FROM 'data/SellerReview.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:9: ERROR:  User has not purchased something from this seller and thus cannot review them.
+CONTEXT:  PL/pgSQL function tf_dtsellerreviews() line 13 at RAISE
+COPY sellerreviews, line 1: "1000,1,2"
+\COPY CartItems FROM 'data/CartItem.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:10: ERROR:  insert or update on table "cartitems" violates foreign key constraint "cartitems_product_id_fkey"
+DETAIL:  Key (product_id)=(1) is not present in table "products".
+/*
+\COPY Users(email, firstname, lastname, street_address, city, state, zip, hashedpassword, balance) FROM 'C:/Users/Michael/Desktop/data/User.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Categories FROM 'C:/Users/Michael/Desktop/data/Category.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Sellers FROM 'C:/Users/Michael/Desktop/data/Seller.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Orders(time_purchased, buyer_id) FROM 'C:/Users/Michael/Desktop/data/Order.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Products(seller_id, quantity, name, price, description, category, img_link, available) FROM 'C:/Users/Michael/Desktop/data/Product.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Purchases FROM 'C:/Users/Michael/Desktop/data/Purchase.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Reviews FROM 'C:/Users/Michael/Desktop/data/Reviews.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY ProductReviews FROM 'C:/Users/Michael/Desktop/data/ProductReviews.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY SellerReviews FROM 'C:/Users/Michael/Desktop/data/SellerReview.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY CartItems FROM 'C:/Users/Michael/Desktop/data/CartItem.csv' WITH DELIMITER ',' NULL '' CSV
+*/
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ psql m[Kamazon
+psql (12.9 (Ubuntu 12.9-0ubuntu0.20.04.1))
+Type "help" for help.
+
+amazon=# setle[K[K[Klect * from users
+amazon-# select * FROM grade;[K
+amazon-# select * FROM grade;[K[K[K[K[K[Kus[K[KUser
+amazon-# select * FROM grade;[K[K[K[K[K[KUser;
+ERROR:  syntax error at or near "select"
+LINE 2: select * FROM grade
+        ^
+amazon=# select * from users
+select * FROM grade
+select * FROM User
+select * FROM User;[A[A[AFROM grade;
+[K
+[K
+[K[A[A[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C][K[K[K[K[K[K[KY[KUser;
+ user 
+------
+ noah
+(1 row)
+
+amazon=# select * FROM User;
+ user 
+------
+ noah
+(1 row)
+
+amazon=# select * FROM User;
+ user 
+------
+ noah
+(1 row)
+
+amazon=# select * FROM User;[C^C
+amazon=# 
+amazon=# .[K\q
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ psql -af load.sql
+psql: error: FATAL:  database "noah" does not exist
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ psql -af load.sql amazon
+\COPY Users(email, firstname, lastname, street_address, city, state, zip, hashedpassword, balance) FROM 'data/User.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:1: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY users, line 5
+\COPY Categories FROM 'data/Category.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:2: ERROR:  duplicate key value violates unique constraint "categories_pkey"
+DETAIL:  Key (name)=(produce) already exists.
+CONTEXT:  COPY categories, line 1
+\COPY Sellers FROM 'data/Seller.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:3: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY sellers, line 4
+\COPY Orders(time_purchased, buyer_id) FROM 'data/Order.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:4: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY orders, line 3
+\COPY Products(seller_id, quantity, name, price, description, category, img_link, available) FROM 'data/Product.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:5: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY products, line 4
+\COPY Purchases FROM 'data/Purchase.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:6: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY purchases, line 5
+\COPY Reviews FROM 'data/Reviews.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:7: ERROR:  duplicate key value violates unique constraint "reviews_pkey"
+DETAIL:  Key (id)=(200) already exists.
+CONTEXT:  COPY reviews, line 1
+\COPY ProductReviews FROM 'data/ProductReviews.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:8: ERROR:  insert or update on table "productreviews" violates foreign key constraint "productreviews_user_id_fkey"
+DETAIL:  Key (user_id)=(1) is not present in table "users".
+\COPY SellerReviews FROM 'data/SellerReview.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:9: ERROR:  User has not purchased something from this seller and thus cannot review them.
+CONTEXT:  PL/pgSQL function tf_dtsellerreviews() line 13 at RAISE
+COPY sellerreviews, line 1: "1000,1,2"
+\COPY CartItems FROM 'data/CartItem.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:10: ERROR:  insert or update on table "cartitems" violates foreign key constraint "cartitems_product_id_fkey"
+DETAIL:  Key (product_id)=(1) is not present in table "products".
+/*
+\COPY Users(email, firstname, lastname, street_address, city, state, zip, hashedpassword, balance) FROM 'C:/Users/Michael/Desktop/data/User.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Categories FROM 'C:/Users/Michael/Desktop/data/Category.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Sellers FROM 'C:/Users/Michael/Desktop/data/Seller.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Orders(time_purchased, buyer_id) FROM 'C:/Users/Michael/Desktop/data/Order.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Products(seller_id, quantity, name, price, description, category, img_link, available) FROM 'C:/Users/Michael/Desktop/data/Product.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Purchases FROM 'C:/Users/Michael/Desktop/data/Purchase.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Reviews FROM 'C:/Users/Michael/Desktop/data/Reviews.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY ProductReviews FROM 'C:/Users/Michael/Desktop/data/ProductReviews.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY SellerReviews FROM 'C:/Users/Michael/Desktop/data/SellerReview.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY CartItems FROM 'C:/Users/Michael/Desktop/data/CartItem.csv' WITH DELIMITER ',' NULL '' CSV
+*/
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ psql -af load.sql amazon[K amazon[Kpsql aa[Kmazon
+psql (12.9 (Ubuntu 12.9-0ubuntu0.20.04.1))
+Type "help" for help.
+
+amazon=# DROP A[K* T[K[K[KA[Kal[K[KALL TAVL[K[KBLES
+amazon-# select * FROM User;
+ERROR:  syntax error at or near "ALL"
+LINE 1: DROP ALL TABLES
+             ^
+amazon=# DROP ALL TABLES
+select * FROM User;[Aselect * FROM User;
+[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[4PDROP ALL TABLES
+select * FROM User;[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[KS;
+ERROR:  syntax error at or near "ALL"
+LINE 1: DROP ALL TABLES;
+             ^
+amazon=# DROP ALL TABLES;[1PTABLES;[1PTABLES;[1PTABLES;[1PTABLES;
+ERROR:  syntax error at or near "TABLES"
+LINE 1: DROP TABLES;
+             ^
+amazon=# ^C
+amazon=# \q
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ psql drop amazon
+psql: error: FATAL:  Peer authentication failed for user "amazon"
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ psql drop amazondamazon[Camazontamazon[Camazonbamazonsamazoneamazon[1Pamazon[1Pamazon[Camazonsamazoneamazon amazon
+psql: warning: extra command-line argument "amazon" ignored
+psql: error: FATAL:  Peer authentication failed for user "database"
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ psql drop database amazon[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[K[Kamazon
+psql (12.9 (Ubuntu 12.9-0ubuntu0.20.04.1))
+Type "help" for help.
+
+amazon=# drop
+amazon-# ^C
+amazon=# DROP TABLES;[K[K[K[K[K[K[K[K;
+ERROR:  syntax error at or near ";"
+LINE 1: DROP;
+            ^
+amazon=# drop data a[K[Kbase amazon;
+ERROR:  cannot drop the currently open database
+amazon=# ^C
+amazon=# \q
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ psdq[K[Kql
+psql: error: FATAL:  database "noah" does not exist
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ psql [K[Kl[K[K[K[Kx[Kdropdb amazon
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ createdb amazon
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ psdq[K[Kql -af create.sql amazon
+CREATE TABLE Users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    firstname VARCHAR(255) NOT NULL,
+    lastname VARCHAR(255) NOT NULL,
+    street_address VARCHAR(255) NOT NULL,
+    city VARCHAR(63) NOT NULL,
+    state VARCHAR(63) NOT NULL,
+    zip INT NOT NULL,
+    hashedpassword VARCHAR(255) NOT NULL,
+    balance FLOAT NOT NULL
+);
+CREATE TABLE
+CREATE TABLE Sellers (
+    id INT NOT NULL PRIMARY KEY,
+    FOREIGN KEY (id) REFERENCES Users(id)
+);
+CREATE TABLE
+CREATE TABLE Orders(
+    id SERIAL PRIMARY KEY,
+    time_purchased timestamp without time zone NOT NULL DEFAULT (current_timestamp AT TIME ZONE 'UTC'),
+    buyer_id INT NOT NULL REFERENCES Users(id)
+);
+CREATE TABLE
+CREATE TABLE Categories (
+    name VARCHAR(255) NOT NULL PRIMARY KEY
+);
+CREATE TABLE
+CREATE TABLE Products (
+    id SERIAL PRIMARY KEY,
+    seller_id INT REFERENCES Sellers(id),
+    quantity INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    price FLOAT NOT NULL,
+    description VARCHAR(4000),
+    category VARCHAR(100) REFERENCES Categories(name),
+    img_link VARCHAR(1000) NOT NULL,
+    available BOOLEAN DEFAULT TRUE
+);
+CREATE TABLE
+CREATE TYPE fulfillment AS ENUM ('ordered', 'shipped', 'delivered');
+CREATE TYPE
+CREATE TABLE Purchases(
+    product_id INT NOT NULL REFERENCES Products(id),
+    order_id INT NOT NULL REFERENCES Orders(id),
+    quantity INT NOT NULL,
+    price_per_item FLOAT NOT NULL,
+    fulfillment_status fulfillment NOT NULL,
+    PRIMARY KEY(order_id, product_id)
+);
+CREATE TABLE
+CREATE TABLE Reviews(
+    id SERIAL PRIMARY KEY,
+    rating INT NOT NULL,
+    review VARCHAR(4000),
+    date timestamp without time zone NOT NULL DEFAULT (current_timestamp AT TIME ZONE 'UTC'),
+    CONSTRAINT Chk_rating CHECK (rating>0 AND rating<6)
+);
+CREATE TABLE
+CREATE TABLE ProductReviews(
+    id INT NOT NULL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES Users(id),
+    product_id INT NOT NULL REFERENCES Products(id),
+    FOREIGN KEY (id) REFERENCES Reviews(id),
+    CONSTRAINT U_ProductReviews UNIQUE (user_id, product_id)
+);
+CREATE TABLE
+CREATE TABLE SellerReviews(
+    id INT NOT NULL PRIMARY KEY,
+    buyer_id INT NOT NULL REFERENCES Users(id),
+    seller_id INT NOT NULL REFERENCES Sellers(id),
+    FOREIGN KEY (id) REFERENCES Reviews(id),
+    CONSTRAINT U_SellerReviews UNIQUE (buyer_id, seller_id)
+);
+CREATE TABLE
+CREATE TABLE Upvotes(
+    review_id INT NOT NULL REFERENCES Reviews(id),
+    user_id INT NOT NULL REFERENCES Users(id),
+    PRIMARY KEY (review_id, user_id)
+);
+CREATE TABLE
+CREATE TABLE CartItems (
+    product_id INT NOT NULL REFERENCES Products(id),
+    buyer_id INT REFERENCES Users(id),
+    quantity INT NOT NULL,
+    PRIMARY KEY (product_id, buyer_id)
+);
+CREATE TABLE
+CREATE FUNCTION TF_DTSellerReviews() RETURNS TRIGGER AS $$
+BEGIN
+  IF NOT EXISTS (
+    (SELECT product_id FROM (
+    Purchases JOIN Orders ON Purchases.order_id=Orders.id
+    )
+    WHERE Orders.buyer_id=NEW.buyer_id)
+    INTERSECT
+    (SELECT id
+    FROM Products
+    WHERE Products.seller_id=NEW.seller_id)
+  )
+  THEN RAISE EXCEPTION 'User has not purchased something from this seller and thus cannot review them.';
+  END IF; 
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE FUNCTION
+CREATE TRIGGER TF_DTSellerReviews
+  BEFORE INSERT OR UPDATE ON SellerReviews
+  FOR EACH ROW
+  EXECUTE PROCEDURE TF_DTSellerReviews();
+CREATE TRIGGER
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ psql -af create.sql amazon[1P[1P[1P[1P[1P[1P[1@l[1@o[1@a[1@d
+\COPY Users(email, firstname, lastname, street_address, city, state, zip, hashedpassword, balance) FROM 'data/User.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:1: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY users, line 5
+\COPY Categories FROM 'data/Category.csv' WITH DELIMITER ',' NULL '' CSV
+COPY 67
+\COPY Sellers FROM 'data/Seller.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:3: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY sellers, line 4
+\COPY Orders(time_purchased, buyer_id) FROM 'data/Order.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:4: ERROR:  insert or update on table "orders" violates foreign key constraint "orders_buyer_id_fkey"
+DETAIL:  Key (buyer_id)=(1) is not present in table "users".
+\COPY Products(seller_id, quantity, name, price, description, category, img_link, available) FROM 'data/Product.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:5: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY products, line 4
+\COPY Purchases FROM 'data/Purchase.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:6: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY purchases, line 5
+\COPY Reviews FROM 'data/Reviews.csv' WITH DELIMITER ',' NULL '' CSV
+COPY 2
+\COPY ProductReviews FROM 'data/ProductReviews.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:8: ERROR:  insert or update on table "productreviews" violates foreign key constraint "productreviews_user_id_fkey"
+DETAIL:  Key (user_id)=(1) is not present in table "users".
+\COPY SellerReviews FROM 'data/SellerReview.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:9: ERROR:  User has not purchased something from this seller and thus cannot review them.
+CONTEXT:  PL/pgSQL function tf_dtsellerreviews() line 13 at RAISE
+COPY sellerreviews, line 1: "1000,1,2"
+\COPY CartItems FROM 'data/CartItem.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:10: ERROR:  insert or update on table "cartitems" violates foreign key constraint "cartitems_product_id_fkey"
+DETAIL:  Key (product_id)=(1) is not present in table "products".
+/*
+\COPY Users(email, firstname, lastname, street_address, city, state, zip, hashedpassword, balance) FROM 'C:/Users/Michael/Desktop/data/User.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Categories FROM 'C:/Users/Michael/Desktop/data/Category.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Sellers FROM 'C:/Users/Michael/Desktop/data/Seller.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Orders(time_purchased, buyer_id) FROM 'C:/Users/Michael/Desktop/data/Order.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Products(seller_id, quantity, name, price, description, category, img_link, available) FROM 'C:/Users/Michael/Desktop/data/Product.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Purchases FROM 'C:/Users/Michael/Desktop/data/Purchase.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Reviews FROM 'C:/Users/Michael/Desktop/data/Reviews.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY ProductReviews FROM 'C:/Users/Michael/Desktop/data/ProductReviews.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY SellerReviews FROM 'C:/Users/Michael/Desktop/data/SellerReview.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY CartItems FROM 'C:/Users/Michael/Desktop/data/CartItem.csv' WITH DELIMITER ',' NULL '' CSV
+*/
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ psql amazon
+psql (12.9 (Ubuntu 12.9-0ubuntu0.20.04.1))
+Type "help" for help.
+
+amazon=# select * from USE[K[Ksers
+amazon-# ^C
+amazon=# drop database amazon;^C
+amazon=# drop database amazon;[C[C[C[C[C[C[C[C[C[Kd[Kselect * from users;
+ id | email | firstname | lastname | street_address | city | state | zip | hashedpassword | balance 
+----+-------+-----------+----------+----------------+------+-------+-----+----------------+---------
+(0 rows)
+
+amazon=# \q
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ psql amazon-af load.sql amazon[2@create[C[C[C[C[C[C[C[C[C[C[C[11Pcreatedb[C[C[C[C[C[C[C[2Pdrop[C[C[C[C[C[C[C[C[Cpsql[K amazondrop database amazonamazon[K[Kdropdb amazon[2@create[C[C[C[C[C[C[C[C[C[11@psql -af create.sql[C[C[C[C[C[C[C[2Pload[C[C[C[C[C[C[C[C[C[C[Camazon[K[K./ins[K[K[Ksetup.sh [K
+CREATE TABLE Users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    firstname VARCHAR(255) NOT NULL,
+    lastname VARCHAR(255) NOT NULL,
+    street_address VARCHAR(255) NOT NULL,
+    city VARCHAR(63) NOT NULL,
+    state VARCHAR(63) NOT NULL,
+    zip INT NOT NULL,
+    hashedpassword VARCHAR(255) NOT NULL,
+    balance FLOAT NOT NULL
+);
+CREATE TABLE
+CREATE TABLE Sellers (
+    id INT NOT NULL PRIMARY KEY,
+    FOREIGN KEY (id) REFERENCES Users(id)
+);
+CREATE TABLE
+CREATE TABLE Orders(
+    id SERIAL PRIMARY KEY,
+    time_purchased timestamp without time zone NOT NULL DEFAULT (current_timestamp AT TIME ZONE 'UTC'),
+    buyer_id INT NOT NULL REFERENCES Users(id)
+);
+CREATE TABLE
+CREATE TABLE Categories (
+    name VARCHAR(255) NOT NULL PRIMARY KEY
+);
+CREATE TABLE
+CREATE TABLE Products (
+    id SERIAL PRIMARY KEY,
+    seller_id INT REFERENCES Sellers(id),
+    quantity INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    price FLOAT NOT NULL,
+    description VARCHAR(4000),
+    category VARCHAR(100) REFERENCES Categories(name),
+    img_link VARCHAR(1000) NOT NULL,
+    available BOOLEAN DEFAULT TRUE
+);
+CREATE TABLE
+CREATE TYPE fulfillment AS ENUM ('ordered', 'shipped', 'delivered');
+CREATE TYPE
+CREATE TABLE Purchases(
+    product_id INT NOT NULL REFERENCES Products(id),
+    order_id INT NOT NULL REFERENCES Orders(id),
+    quantity INT NOT NULL,
+    price_per_item FLOAT NOT NULL,
+    fulfillment_status fulfillment NOT NULL,
+    PRIMARY KEY(order_id, product_id)
+);
+CREATE TABLE
+CREATE TABLE Reviews(
+    id SERIAL PRIMARY KEY,
+    rating INT NOT NULL,
+    review VARCHAR(4000),
+    date timestamp without time zone NOT NULL DEFAULT (current_timestamp AT TIME ZONE 'UTC'),
+    CONSTRAINT Chk_rating CHECK (rating>0 AND rating<6)
+);
+CREATE TABLE
+CREATE TABLE ProductReviews(
+    id INT NOT NULL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES Users(id),
+    product_id INT NOT NULL REFERENCES Products(id),
+    FOREIGN KEY (id) REFERENCES Reviews(id),
+    CONSTRAINT U_ProductReviews UNIQUE (user_id, product_id)
+);
+CREATE TABLE
+CREATE TABLE SellerReviews(
+    id INT NOT NULL PRIMARY KEY,
+    buyer_id INT NOT NULL REFERENCES Users(id),
+    seller_id INT NOT NULL REFERENCES Sellers(id),
+    FOREIGN KEY (id) REFERENCES Reviews(id),
+    CONSTRAINT U_SellerReviews UNIQUE (buyer_id, seller_id)
+);
+CREATE TABLE
+CREATE TABLE Upvotes(
+    review_id INT NOT NULL REFERENCES Reviews(id),
+    user_id INT NOT NULL REFERENCES Users(id),
+    PRIMARY KEY (review_id, user_id)
+);
+CREATE TABLE
+CREATE TABLE CartItems (
+    product_id INT NOT NULL REFERENCES Products(id),
+    buyer_id INT REFERENCES Users(id),
+    quantity INT NOT NULL,
+    PRIMARY KEY (product_id, buyer_id)
+);
+CREATE TABLE
+CREATE FUNCTION TF_DTSellerReviews() RETURNS TRIGGER AS $$
+BEGIN
+  IF NOT EXISTS (
+    (SELECT product_id FROM (
+    Purchases JOIN Orders ON Purchases.order_id=Orders.id
+    )
+    WHERE Orders.buyer_id=NEW.buyer_id)
+    INTERSECT
+    (SELECT id
+    FROM Products
+    WHERE Products.seller_id=NEW.seller_id)
+  )
+  THEN RAISE EXCEPTION 'User has not purchased something from this seller and thus cannot review them.';
+  END IF; 
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE FUNCTION
+CREATE TRIGGER TF_DTSellerReviews
+  BEFORE INSERT OR UPDATE ON SellerReviews
+  FOR EACH ROW
+  EXECUTE PROCEDURE TF_DTSellerReviews();
+CREATE TRIGGER
+\COPY Users(email, firstname, lastname, street_address, city, state, zip, hashedpassword, balance) FROM 'data/User.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:1: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY users, line 5
+\COPY Categories FROM 'data/Category.csv' WITH DELIMITER ',' NULL '' CSV
+COPY 67
+\COPY Sellers FROM 'data/Seller.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:3: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY sellers, line 4
+\COPY Orders(time_purchased, buyer_id) FROM 'data/Order.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:4: ERROR:  insert or update on table "orders" violates foreign key constraint "orders_buyer_id_fkey"
+DETAIL:  Key (buyer_id)=(1) is not present in table "users".
+\COPY Products(seller_id, quantity, name, price, description, category, img_link, available) FROM 'data/Product.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:5: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY products, line 4
+\COPY Purchases FROM 'data/Purchase.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:6: ERROR:  unquoted carriage return found in data
+HINT:  Use quoted CSV field to represent carriage return.
+CONTEXT:  COPY purchases, line 5
+\COPY Reviews FROM 'data/Reviews.csv' WITH DELIMITER ',' NULL '' CSV
+COPY 2
+\COPY ProductReviews FROM 'data/ProductReviews.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:8: ERROR:  insert or update on table "productreviews" violates foreign key constraint "productreviews_user_id_fkey"
+DETAIL:  Key (user_id)=(1) is not present in table "users".
+\COPY SellerReviews FROM 'data/SellerReview.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:9: ERROR:  User has not purchased something from this seller and thus cannot review them.
+CONTEXT:  PL/pgSQL function tf_dtsellerreviews() line 13 at RAISE
+COPY sellerreviews, line 1: "1000,1,2"
+\COPY CartItems FROM 'data/CartItem.csv' WITH DELIMITER ',' NULL '' CSV
+psql:load.sql:10: ERROR:  insert or update on table "cartitems" violates foreign key constraint "cartitems_product_id_fkey"
+DETAIL:  Key (product_id)=(1) is not present in table "products".
+/*
+\COPY Users(email, firstname, lastname, street_address, city, state, zip, hashedpassword, balance) FROM 'C:/Users/Michael/Desktop/data/User.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Categories FROM 'C:/Users/Michael/Desktop/data/Category.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Sellers FROM 'C:/Users/Michael/Desktop/data/Seller.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Orders(time_purchased, buyer_id) FROM 'C:/Users/Michael/Desktop/data/Order.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Products(seller_id, quantity, name, price, description, category, img_link, available) FROM 'C:/Users/Michael/Desktop/data/Product.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Purchases FROM 'C:/Users/Michael/Desktop/data/Purchase.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Reviews FROM 'C:/Users/Michael/Desktop/data/Reviews.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY ProductReviews FROM 'C:/Users/Michael/Desktop/data/ProductReviews.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY SellerReviews FROM 'C:/Users/Michael/Desktop/data/SellerReview.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY CartItems FROM 'C:/Users/Michael/Desktop/data/CartItem.csv' WITH DELIMITER ',' NULL '' CSV
+*/
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ ./setup.shpsql amazon
+psql (12.9 (Ubuntu 12.9-0ubuntu0.20.04.1))
+Type "help" for help.
+
+amazon=# s[Kselecy [K[Ky [K[Kt ([K* from users
+amazon-# ^C
+amazon=# se[K[Kselect * from users;
+ id | email | firstname | lastname | street_address | city | state | zip | hashedpassword | balance 
+----+-------+-----------+----------+----------------+------+-------+-----+----------------+---------
+(0 rows)
+
+amazon=# \q
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ psql amazon[1P./setup.shpsql amazon-af load.sql amazon[2@create[C[C[C[C[C[C[C[C[C[C[C[11Pcreatedb[C[C[C[C[C[C[C[2Pdrop[C[C[C[C[C[C[C[C[Cpsql[K amazondrop database amazonamazon[K[Kdropdb amazon[2@create[C[C[C[C[C[C[C[C[C[11@psql -af create.sql[C[C[C[C[C[C[C[2Pload[C[C[C[C[C[C[C[C[C[C[Camazon[K[1P./setup.shpsql amazon[Kcd ..
+]0;noah@cs316: ~/mini-amazon-cs-316/backend[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend[00m$ ls
+amazon.py  [0m[01;34mapp[0m  [01;34mdb[0m  [01;34menv[0m  flaskenv-template.env  [01;32minstall.sh[0m  LICENSE  [01;34m__pycache__[0m  README.md  requirements.txt
+]0;noah@cs316: ~/mini-amazon-cs-316/backend[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend[00m$ flast ru[K[K[K[Kk run
+ * Serving Flask app 'amazon.py' (lazy loading)
+ * Environment: development
+ * Debug mode: on
+ * Running on all addresses.
+   WARNING: This is a development server. Do not use it in a production deployment.
+ * Running on http://10.128.0.2:5000/ (Press CTRL+C to quit)
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 936-508-177
+REQ: 
+{'email': 'a', 'password': 'a', 'firstname': 'a', 'lastname': 'a', 'address': 'a', 'city': 'a', 'state': 'a', 'zip': '1'}
+HERE
+HERE
+unsupported operand type(s) for +: 'NoneType' and 'int'
+USER
+None
+127.0.0.1 - - [19/Nov/2021 17:01:41] "[35m[1mPOST /register HTTP/1.1[0m" 500 -
+Traceback (most recent call last):
+  File "/home/noah/env/lib/python3.8/site-packages/flask/app.py", line 2091, in __call__
+    return self.wsgi_app(environ, start_response)
+  File "/home/noah/env/lib/python3.8/site-packages/flask/app.py", line 2076, in wsgi_app
+    response = self.handle_exception(e)
+  File "/home/noah/env/lib/python3.8/site-packages/flask_cors/extension.py", line 165, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+  File "/home/noah/env/lib/python3.8/site-packages/flask/app.py", line 2073, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/home/noah/env/lib/python3.8/site-packages/flask/app.py", line 1518, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/home/noah/env/lib/python3.8/site-packages/flask_cors/extension.py", line 165, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+  File "/home/noah/env/lib/python3.8/site-packages/flask/app.py", line 1516, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/home/noah/env/lib/python3.8/site-packages/flask/app.py", line 1502, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**req.view_args)
+  File "/home/noah/mini-amazon-cs-316/backend/app/users.py", line 75, in register
+    return jsonify(user=user.json()), 200
+AttributeError: 'NoneType' object has no attribute 'json'
+^C]0;noah@cs316: ~/mini-amazon-cs-316/backend[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend[00m$ ls
+amazon.py  [0m[01;34mapp[0m  [01;34mdb[0m  [01;34menv[0m  flaskenv-template.env  [01;32minstall.sh[0m  LICENSE  [01;34m__pycache__[0m  README.md  requirements.txt
+]0;noah@cs316: ~/mini-amazon-cs-316/backend[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend[00m$ git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	[31mmodified:   app/__init__.py[m
+	[31mmodified:   app/models/user.py[m
+	[31mmodified:   app/users.py[m
+	[31mmodified:   db/data/Order.csv[m
+	[31mmodified:   db/data/Product.csv[m
+	[31mmodified:   db/data/Purchase.csv[m
+	[31mmodified:   db/data/Seller.csv[m
+	[31mmodified:   db/data/User.csv[m
+	[31mmodified:   db/generate_data.sh[m
+	[31mmodified:   ../frontend/src/Pages/EachPage.tsx[m
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	[31mapp/models/cart.py[m
+	[31mdb/typescript[m
+
+no changes added to commit (use "git add" and/or "git commit -a")
+]0;noah@cs316: ~/mini-amazon-cs-316/backend[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend[00m$ cd ..
+]0;noah@cs316: ~/mini-amazon-cs-316[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316[00m$ git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	[31mmodified:   backend/app/__init__.py[m
+	[31mmodified:   backend/app/models/user.py[m
+	[31mmodified:   backend/app/users.py[m
+	[31mmodified:   backend/db/data/Order.csv[m
+	[31mmodified:   backend/db/data/Product.csv[m
+	[31mmodified:   backend/db/data/Purchase.csv[m
+	[31mmodified:   backend/db/data/Seller.csv[m
+	[31mmodified:   backend/db/data/User.csv[m
+	[31mmodified:   backend/db/generate_data.sh[m
+	[31mmodified:   frontend/src/Pages/EachPage.tsx[m
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	[31mbackend/app/models/cart.py[m
+	[31mbackend/db/typescript[m
+
+no changes added to commit (use "git add" and/or "git commit -a")
+]0;noah@cs316: ~/mini-amazon-cs-316[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316[00m$ gti[K[K[Kgit status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	[31mmodified:   backend/app/__init__.py[m
+	[31mmodified:   backend/app/models/user.py[m
+	[31mmodified:   backend/app/users.py[m
+	[31mmodified:   backend/db/data/Order.csv[m
+	[31mmodified:   backend/db/data/Product.csv[m
+	[31mmodified:   backend/db/data/Purchase.csv[m
+	[31mmodified:   backend/db/data/Seller.csv[m
+	[31mmodified:   backend/db/data/User.csv[m
+	[31mmodified:   backend/db/generate_data.sh[m
+	[31mmodified:   frontend/src/Pages/EachPage.tsx[m
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	[31mbackend/app/models/cart.py[m
+	[31mbackend/db/typescript[m
+
+no changes added to commit (use "git add" and/or "git commit -a")
+]0;noah@cs316: ~/mini-amazon-cs-316[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316[00m$ git checkut[K[Kout -b ca[K[Knctiron[K[K[K[K[K[K[Kc[Kncitron/cart-backed[Knd
+Switched to a new branch 'ncitron/cart-backend'
+]0;noah@cs316: ~/mini-amazon-cs-316[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316[00m$ ls
+[0m[01;34mbackend[0m  [01;34mfrontend[0m  README.md
+]0;noah@cs316: ~/mini-amazon-cs-316[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316[00m$ git s[Kadd backend/app/models/cart.py 
+]0;noah@cs316: ~/mini-amazon-cs-316[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316[00m$ git add frontend/
+node_modules/      package.json       package-lock.json  public/            README.md          src/               tsconfig.json
+]0;noah@cs316: ~/mini-amazon-cs-316[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316[00m$ git add frontend/
+node_modules/      package.json       package-lock.json  public/            README.md          src/               tsconfig.json
+]0;noah@cs316: ~/mini-amazon-cs-316[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316[00m$ git add frontend/src/pages[K[K[K[K[KPages/EachPage.tsx 
+]0;noah@cs316: ~/mini-amazon-cs-316[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316[00m$ git status
+On branch ncitron/cart-backend
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	[32mnew file:   backend/app/models/cart.py[m
+	[32mmodified:   frontend/src/Pages/EachPage.tsx[m
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	[31mmodified:   backend/app/__init__.py[m
+	[31mmodified:   backend/app/models/user.py[m
+	[31mmodified:   backend/app/users.py[m
+	[31mmodified:   backend/db/data/Order.csv[m
+	[31mmodified:   backend/db/data/Product.csv[m
+	[31mmodified:   backend/db/data/Purchase.csv[m
+	[31mmodified:   backend/db/data/Seller.csv[m
+	[31mmodified:   backend/db/data/User.csv[m
+	[31mmodified:   backend/db/generate_data.sh[m
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	[31mbackend/db/typescript[m
+
+]0;noah@cs316: ~/mini-amazon-cs-316[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316[00m$ git co m[K[Kmmit -m "basic backend setup"
+[ncitron/cart-backend 11dff49] basic backend setup
+ 2 files changed, 24 insertions(+), 1 deletion(-)
+ create mode 100644 backend/app/models/cart.py
+]0;noah@cs316: ~/mini-amazon-cs-316[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316[00m$ git pus [Kh orn[Kigin ncitron/cart-backend
+Enumerating objects: 18, done.
+Counting objects:   5% (1/18)Counting objects:  11% (2/18)Counting objects:  16% (3/18)Counting objects:  22% (4/18)Counting objects:  27% (5/18)Counting objects:  33% (6/18)Counting objects:  38% (7/18)Counting objects:  44% (8/18)Counting objects:  50% (9/18)Counting objects:  55% (10/18)Counting objects:  61% (11/18)Counting objects:  66% (12/18)Counting objects:  72% (13/18)Counting objects:  77% (14/18)Counting objects:  83% (15/18)Counting objects:  88% (16/18)Counting objects:  94% (17/18)Counting objects: 100% (18/18)Counting objects: 100% (18/18), done.
+Delta compression using up to 2 threads
+Compressing objects:  10% (1/10)Compressing objects:  20% (2/10)Compressing objects:  30% (3/10)Compressing objects:  40% (4/10)Compressing objects:  50% (5/10)Compressing objects:  60% (6/10)Compressing objects:  70% (7/10)Compressing objects:  80% (8/10)Compressing objects:  90% (9/10)Compressing objects: 100% (10/10)Compressing objects: 100% (10/10), done.
+Writing objects:  10% (1/10)Writing objects:  20% (2/10)Writing objects:  30% (3/10)Writing objects:  40% (4/10)Writing objects:  50% (5/10)Writing objects:  60% (6/10)Writing objects:  70% (7/10)Writing objects:  80% (8/10)Writing objects:  90% (9/10)Writing objects: 100% (10/10)Writing objects: 100% (10/10), 1.11 KiB | 378.00 KiB/s, done.
+Total 10 (delta 7), reused 0 (delta 0)
+remote: 
+remote: To create a merge request for ncitron/cart-backend, visit:[K
+remote:   https://gitlab.oit.duke.edu/stt13/mini-amazon-cs-316/-/merge_requests/new?merge_request%5Bsource_branch%5D=ncitron%2Fcart-backend[K
+remote: 
+To gitlab.oit.duke.edu:stt13/mini-amazon-cs-316.git
+ * [new branch]      ncitron/cart-backend -> ncitron/cart-backend
+]0;noah@cs316: ~/mini-amazon-cs-316[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316[00m$ git reset --hard ncitron/cart-backend
+HEAD is now at 11dff49 basic backend setup
+]0;noah@cs316: ~/mini-amazon-cs-316[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316[00m$ cd [K backend/dp[Kb/
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ ./setup.sh 
+CREATE TABLE Users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    firstname VARCHAR(255) NOT NULL,
+    lastname VARCHAR(255) NOT NULL,
+    street_address VARCHAR(255) NOT NULL,
+    city VARCHAR(63) NOT NULL,
+    state VARCHAR(63) NOT NULL,
+    zip INT NOT NULL,
+    hashedpassword VARCHAR(255) NOT NULL,
+    balance FLOAT NOT NULL
+);
+CREATE TABLE
+CREATE TABLE Sellers (
+    id INT NOT NULL PRIMARY KEY,
+    FOREIGN KEY (id) REFERENCES Users(id)
+);
+CREATE TABLE
+CREATE TABLE Orders(
+    id SERIAL PRIMARY KEY,
+    time_purchased timestamp without time zone NOT NULL DEFAULT (current_timestamp AT TIME ZONE 'UTC'),
+    buyer_id INT NOT NULL REFERENCES Users(id)
+);
+CREATE TABLE
+CREATE TABLE Categories (
+    name VARCHAR(255) NOT NULL PRIMARY KEY
+);
+CREATE TABLE
+CREATE TABLE Products (
+    id SERIAL PRIMARY KEY,
+    seller_id INT REFERENCES Sellers(id),
+    quantity INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    price FLOAT NOT NULL,
+    description VARCHAR(4000),
+    category VARCHAR(100) REFERENCES Categories(name),
+    img_link VARCHAR(1000) NOT NULL,
+    available BOOLEAN DEFAULT TRUE
+);
+CREATE TABLE
+CREATE TYPE fulfillment AS ENUM ('ordered', 'shipped', 'delivered');
+CREATE TYPE
+CREATE TABLE Purchases(
+    product_id INT NOT NULL REFERENCES Products(id),
+    order_id INT NOT NULL REFERENCES Orders(id),
+    quantity INT NOT NULL,
+    price_per_item FLOAT NOT NULL,
+    fulfillment_status fulfillment NOT NULL,
+    PRIMARY KEY(order_id, product_id)
+);
+CREATE TABLE
+CREATE TABLE Reviews(
+    id SERIAL PRIMARY KEY,
+    rating INT NOT NULL,
+    review VARCHAR(4000),
+    date timestamp without time zone NOT NULL DEFAULT (current_timestamp AT TIME ZONE 'UTC'),
+    CONSTRAINT Chk_rating CHECK (rating>0 AND rating<6)
+);
+CREATE TABLE
+CREATE TABLE ProductReviews(
+    id INT NOT NULL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES Users(id),
+    product_id INT NOT NULL REFERENCES Products(id),
+    FOREIGN KEY (id) REFERENCES Reviews(id),
+    CONSTRAINT U_ProductReviews UNIQUE (user_id, product_id)
+);
+CREATE TABLE
+CREATE TABLE SellerReviews(
+    id INT NOT NULL PRIMARY KEY,
+    buyer_id INT NOT NULL REFERENCES Users(id),
+    seller_id INT NOT NULL REFERENCES Sellers(id),
+    FOREIGN KEY (id) REFERENCES Reviews(id),
+    CONSTRAINT U_SellerReviews UNIQUE (buyer_id, seller_id)
+);
+CREATE TABLE
+CREATE TABLE Upvotes(
+    review_id INT NOT NULL REFERENCES Reviews(id),
+    user_id INT NOT NULL REFERENCES Users(id),
+    PRIMARY KEY (review_id, user_id)
+);
+CREATE TABLE
+CREATE TABLE CartItems (
+    product_id INT NOT NULL REFERENCES Products(id),
+    buyer_id INT REFERENCES Users(id),
+    quantity INT NOT NULL,
+    PRIMARY KEY (product_id, buyer_id)
+);
+CREATE TABLE
+CREATE FUNCTION TF_DTSellerReviews() RETURNS TRIGGER AS $$
+BEGIN
+  IF NOT EXISTS (
+    (SELECT product_id FROM (
+    Purchases JOIN Orders ON Purchases.order_id=Orders.id
+    )
+    WHERE Orders.buyer_id=NEW.buyer_id)
+    INTERSECT
+    (SELECT id
+    FROM Products
+    WHERE Products.seller_id=NEW.seller_id)
+  )
+  THEN RAISE EXCEPTION 'User has not purchased something from this seller and thus cannot review them.';
+  END IF; 
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE FUNCTION
+CREATE TRIGGER TF_DTSellerReviews
+  BEFORE INSERT OR UPDATE ON SellerReviews
+  FOR EACH ROW
+  EXECUTE PROCEDURE TF_DTSellerReviews();
+CREATE TRIGGER
+\COPY Users(email, firstname, lastname, street_address, city, state, zip, hashedpassword, balance) FROM 'data/User.csv' WITH DELIMITER ',' NULL '' CSV
+COPY 1004
+\COPY Categories FROM 'data/Category.csv' WITH DELIMITER ',' NULL '' CSV
+COPY 67
+\COPY Sellers FROM 'data/Seller.csv' WITH DELIMITER ',' NULL '' CSV
+COPY 307
+\COPY Orders(time_purchased, buyer_id) FROM 'data/Order.csv' WITH DELIMITER ',' NULL '' CSV
+COPY 1002
+\COPY Products(seller_id, quantity, name, price, description, category, img_link, available) FROM 'data/Product.csv' WITH DELIMITER ',' NULL '' CSV
+COPY 1003
+\COPY Purchases FROM 'data/Purchase.csv' WITH DELIMITER ',' NULL '' CSV
+COPY 1004
+\COPY Reviews FROM 'data/Reviews.csv' WITH DELIMITER ',' NULL '' CSV
+COPY 2
+\COPY ProductReviews FROM 'data/ProductReviews.csv' WITH DELIMITER ',' NULL '' CSV
+COPY 1
+\COPY SellerReviews FROM 'data/SellerReview.csv' WITH DELIMITER ',' NULL '' CSV
+COPY 1
+\COPY CartItems FROM 'data/CartItem.csv' WITH DELIMITER ',' NULL '' CSV
+COPY 4
+/*
+\COPY Users(email, firstname, lastname, street_address, city, state, zip, hashedpassword, balance) FROM 'C:/Users/Michael/Desktop/data/User.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Categories FROM 'C:/Users/Michael/Desktop/data/Category.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Sellers FROM 'C:/Users/Michael/Desktop/data/Seller.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Orders(time_purchased, buyer_id) FROM 'C:/Users/Michael/Desktop/data/Order.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Products(seller_id, quantity, name, price, description, category, img_link, available) FROM 'C:/Users/Michael/Desktop/data/Product.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Purchases FROM 'C:/Users/Michael/Desktop/data/Purchase.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY Reviews FROM 'C:/Users/Michael/Desktop/data/Reviews.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY ProductReviews FROM 'C:/Users/Michael/Desktop/data/ProductReviews.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY SellerReviews FROM 'C:/Users/Michael/Desktop/data/SellerReview.csv' WITH DELIMITER ',' NULL '' CSV
+\COPY CartItems FROM 'C:/Users/Michael/Desktop/data/CartItem.csv' WITH DELIMITER ',' NULL '' CSV
+*/
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ i[Ks[Kls[K[K.[Kpsql amazon
+psql (12.9 (Ubuntu 12.9-0ubuntu0.20.04.1))
+Type "help" for help.
+
+amazon=# select * from users;
+[?1049h[22;0;0t[?1h=  id  |                email                |   firstname   |  lastname   |                         street_address                           |         city         | state | zip  |                                             hashedpassword                                               |  balance  
+------+-------------------------------------+---------------+-------------+---------------------------------------------------------------- -+----------------------+-------+------+--------------------------------------------------------------------------------------------------- ------+-----------
+    1 | xi@website.com                      | Xi            | Jinping     | 174 Chang'an Avenue                                              | Beijing              | CN    |    4 | pbkdf2:sha256:260000$xbB0eCakTJvDaPAj$b6d0eb6ad7b226975045c4dc5492290e5d0ba99fc105403ba9d97761a5ce 7976  |       100
+    2 | barack@website.com                  | Barack        | Obama       | 1400 Pennsylvania Avenue                                         | Washington           | DC    |    3 | pbkdf2:sha256:260000$xbB0eCakTJvDaPAj$b6d0eb6ad7b226975045c4dc5492290e5d0ba99fc105403ba9d97761a5ce 7976  |    150000
+    3 | benjamin@website.com                | Benjamin      | Netanyahu   | Kiryat Ben Gurion Building C                                     | Israel               | IS    |    2 |  pbkdf2:sha256:260000$xbB0eCakTJvDaPAj$b6d0eb6ad7b226975045c4dc5492290e5d0ba99fc105403ba9d97761a5c e7976 |      1440
+:[K[K:[K[K    4 | emmanuel@website.com                | Emmanuel      | Macron      | Palais de l'Élysée 55                                           :[K[K[?1l>[?1049l[23;0;0tamazon=# \q
+]0;noah@cs316: ~/mini-amazon-cs-316/backend/db[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend/db[00m$ cd ..
+]0;noah@cs316: ~/mini-amazon-cs-316/backend[01;32mnoah@cs316[00m:[01;34m~/mini-amazon-cs-316/backend[00m$ flas [Kk run
+ * Serving Flask app 'amazon.py' (lazy loading)
+ * Environment: development
+ * Debug mode: on
+ * Running on all addresses.
+   WARNING: This is a development server. Do not use it in a production deployment.
+ * Running on http://10.128.0.2:5000/ (Press CTRL+C to quit)
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 936-508-177
+<app.models.user.User object at 0x7f1bbd7ad8e0>
+127.0.0.1 - - [19/Nov/2021 17:04:52] "POST /register HTTP/1.1" 200 -
+{'email': 'a', 'password': 'a'}
+127.0

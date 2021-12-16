@@ -1,0 +1,35 @@
+.becomeSellerContainer {
+  width: 100%;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  float: center;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+
+.blurbContainer {
+  width: 91%;
+  background-color: orange;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.blurbContainer > * {
+  margin: 10px;
+}
+
+.beansQuestionContainer {
+  width: 50%;
+  text-align: center;
+}
+
+.becomeSellerButtonContainer {
+  width: 20%;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}

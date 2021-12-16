@@ -1,0 +1,47 @@
+.itemDialog {
+  width: 40vw;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+}
+
+.itemDialog > * {
+  margin: 10px;
+  width: 80%;
+}
+
+.availableRow {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.categoryRow {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+}
+
+.priceQuantityRow {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.nameRow {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
+
+.submitButtonContainer {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
